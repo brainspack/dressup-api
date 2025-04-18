@@ -1,0 +1,155 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  SHOP_OWNER
+  CUSTOMER
+}
+
+enum Language {
+  EN
+  HI
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PROGRESS
+  DELIVERED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String?
+  mobileNumber String   @unique
+  role         Role
+  language     Language @default(HI)
+  otp           String?  // OTP stored temporarily
+  otpExpiresAt  DateTime? // OTP expiration time
+  createdAt    DateTime @default(now())
+
+  // Relations
+  shops Shop[] @relation("ShopOwnerRelation") // Shop owners manage multiple shops
+
+  @@map("users")
+}
+
+model Shop {
+  id      String @id @default(uuid())
+  name    String
+  ownerId String
+
+  // Relations
+  owner     User       @relation("ShopOwnerRelation", fields: [ownerId], references: [id])
+  tailors   Tailor[]
+  customers Customer[]
+  orders    Order[]
+
+  @@map("shops")
+}
+
+model Tailor {
+  id           String @id @default(uuid())
+  name         String
+  mobileNumber String @unique
+  shopId       String
+
+  // Relations
+  shop Shop @relation(fields: [shopId], references: [id])
+
+  @@map("tailors")
+}
+
+model Customer {
+  id           String   @id @default(uuid())
+  name         String
+  mobileNumber String
+  address      String?
+  createdAt    DateTime @default(now())
+  shopId       String
+
+  // Relations
+  shop         Shop          @relation(fields: [shopId], references: [id])
+  measurements Measurement[]
+  orders       Order[]
+
+  @@map("customers")
+}
+
+model Measurement {
+  id           String   @id @default(uuid())
+  customerId   String
+  height       Float
+  chest        Float?
+  waist        Float?
+  hip          Float?
+  shoulder     Float?
+  sleeveLength Float?
+  inseam       Float?
+  neck         Float?
+  createdAt    DateTime @default(now())
+
+  // Relations
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@map("measurements")
+}
+
+model Order {
+  id           String      @id @default(uuid())
+  customerId   String
+  shopId       String
+  tailorName   String? // Only store tailor name & number
+  tailorNumber String?
+  status       OrderStatus @default(PENDING)
+  createdAt    DateTime    @default(now())
+
+  // Relations
+  customer Customer @relation(fields: [customerId], references: [id])
+  shop     Shop     @relation(fields: [shopId], references: [id])
+  clothes  Cloth[]
+  costs    Cost[]
+
+  @@map("orders")
+}
+
+model Cloth {
+  id          String   @id @default(uuid())
+  orderId     String
+  type        String
+  color       String?
+  fabric      String?
+  designNotes String?
+  imageUrls   String[] // Only Image URLs
+  videoUrls   String[] // Only video URLs
+  createdAt   DateTime @default(now())
+  // Relations
+  order       Order    @relation(fields: [orderId], references: [id])
+
+  @@map("cloths")
+}
+
+model Cost {
+  id           String @id @default(uuid())
+  orderId      String
+  materialCost Float
+  laborCost    Float
+  totalCost    Float
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@map("cost")
+}
