@@ -31,6 +31,15 @@
 $ yarn install
 ```
 
+Setup your .env file
+DATABASE_URL="postgresql://user:password@localhost:5432/dress_up"
+
+Run this command to apply all existing migrations:
+npx prisma migrate deploy
+
+Generate the Prisma client
+npx prisma generate
+
 ## Compile and run the project
 
 ```bash
