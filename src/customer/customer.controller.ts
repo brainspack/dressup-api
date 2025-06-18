@@ -1,4 +1,15 @@
-import { Controller, Post, Get, Body, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  Request,
+  InternalServerErrorException,
+  Param,
+  Delete,
+  Patch,
+} from '@nestjs/common';
 import { CustomerService } from './customer.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -9,11 +20,56 @@ export class CustomerController {
 
   @Post('create')
   async createCustomer(@Body() customerDto: any, @Request() req) {
-    return this.customerService.create(customerDto, req.user.id);
+    try {
+      if (!customerDto.name || !customerDto.mobileNumber) {
+        throw new Error('Name and mobile number are required');
+      }
+      const { shopId, ...customerDetails } = customerDto;
+      return await this.customerService.create(customerDetails, req.user.userId, shopId);
+    } catch (error) {
+      console.error('Customer creation error:', error);
+      throw new InternalServerErrorException(error.message || 'Failed to create customer');
+    }
   }
 
   @Get('my-customers')
   async getCustomers(@Request() req) {
-    return this.customerService.findByUser(req.user.id);
+    try {
+      return await this.customerService.findByUser(req.user.userId);
+    } catch (error) {
+      console.error('Get customers error:', error);
+      throw new InternalServerErrorException('Failed to fetch customers');
+    }
+  }
+
+  @Get(':id')
+  async getCustomerById(@Param('id') id: string) {
+    try {
+      return await this.customerService.findById(id);
+    } catch (error) {
+      console.error('Get customer by ID error:', error);
+      throw new InternalServerErrorException('Failed to fetch customer');
+    }
+  }
+
+  @Delete(':id')
+  async softDeleteCustomer(@Param('id') id: string) {
+    try {
+      await this.customerService.softDelete(id);
+      return { message: 'Customer soft-deleted successfully' };
+    } catch (error) {
+      console.error('Soft delete customer error:', error);
+      throw new InternalServerErrorException(error.message || 'Failed to soft delete customer');
+    }
+  }
+
+  @Patch(':id')
+  async updateCustomer(@Param('id') id: string, @Body() data: any) {
+    try {
+      return await this.customerService.update(id, data);
+    } catch (error) {
+      console.error('Update customer error:', error);
+      throw new InternalServerErrorException(error.message || 'Failed to update customer');
+    }
   }
 }

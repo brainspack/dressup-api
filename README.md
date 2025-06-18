@@ -37,8 +37,19 @@ DATABASE_URL="postgresql://user:password@localhost:5432/dress_up"
 Run this command to apply all existing migrations:
 npx prisma migrate deploy
 
+For reset the migration
+npx prisma migrate reset
+or
+prisma migrate reset  
+
+Then add the schema
+npx prisma migrate dev --name field_name
+
 Generate the Prisma client
 npx prisma generate
+
+
+
 
 ## Compile and run the project
 

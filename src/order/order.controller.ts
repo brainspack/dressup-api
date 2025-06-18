@@ -45,8 +45,8 @@ import {
   
     @Delete(':id')
     @Roles(Role.SHOP_OWNER)
-    delete(@Param('id') id: string) {
-      return this.orderService.deleteOrder(id);
+    softDelete(@Param('id') id: string) {
+      return this.orderService.softDeleteOrder(id);
     }
   }
   

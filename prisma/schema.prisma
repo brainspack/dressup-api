@@ -28,6 +28,7 @@ enum OrderStatus {
   PENDING
   IN_PROGRESS
   DELIVERED
+  CANCELLED
 }
 
 model User {
@@ -47,15 +48,21 @@ model User {
 }
 
 model Shop {
-  id      String @id @default(uuid())
-  name    String
-  ownerId String
+  id            String   @id @default(uuid())
+  name          String
+  phone         String   @unique @default("")
+  address       String   @default("")
 
-  // Relations
-  owner     User       @relation("ShopOwnerRelation", fields: [ownerId], references: [id])
-  tailors   Tailor[]
-  customers Customer[]
-  orders    Order[]
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  deletedAt     DateTime? // Soft delete field
+  
+  ownerId       String   // ✅ Add this line
+  owner         User     @relation("ShopOwnerRelation", fields: [ownerId], references: [id])     
+  
+  tailors       Tailor[]
+  customers     Customer[]
+  orders        Order[]
 
   @@map("shops")
 }
@@ -65,6 +72,7 @@ model Tailor {
   name         String
   mobileNumber String @unique
   shopId       String
+  deletedAt    DateTime? // Soft delete field
 
   // Relations
   shop Shop @relation(fields: [shopId], references: [id])
@@ -75,10 +83,11 @@ model Tailor {
 model Customer {
   id           String   @id @default(uuid())
   name         String
-  mobileNumber String
+  mobileNumber String @unique
   address      String?
   createdAt    DateTime @default(now())
   shopId       String
+  deletedAt    DateTime? // Soft delete field
 
   // Relations
   shop         Shop          @relation(fields: [shopId], references: [id])
@@ -91,7 +100,9 @@ model Customer {
 model Measurement {
   id           String   @id @default(uuid())
   customerId   String
-  height       Float
+  orderId      String? // Make orderId optional initially, assuming not all measurements are tied to an order directly
+  clothId      String   @unique // New field to link to a specific Cloth item
+  height       Float?
   chest        Float?
   waist        Float?
   hip          Float?
@@ -100,9 +111,12 @@ model Measurement {
   inseam       Float?
   neck         Float?
   createdAt    DateTime @default(now())
+  deletedAt    DateTime?   // Soft delete field
 
   // Relations
   customer Customer @relation(fields: [customerId], references: [id])
+  order    Order?   @relation(fields: [orderId], references: [id])
+  cloth    Cloth    @relation(fields: [clothId], references: [id]) // Relation to Cloth model
 
   @@map("measurements")
 }
@@ -114,13 +128,17 @@ model Order {
   tailorName   String? // Only store tailor name & number
   tailorNumber String?
   status       OrderStatus @default(PENDING)
+  orderDate    DateTime    @default(now())
+  deliveryDate DateTime? // Add this line for optional delivery date
   createdAt    DateTime    @default(now())
+  deletedAt    DateTime?   // Soft delete field
 
   // Relations
   customer Customer @relation(fields: [customerId], references: [id])
   shop     Shop     @relation(fields: [shopId], references: [id])
   clothes  Cloth[]
   costs    Cost[]
+  measurements Measurement[] // Add this line to link measurements to orders
 
   @@map("orders")
 }
@@ -131,12 +149,14 @@ model Cloth {
   type        String
   color       String?
   fabric      String?
+  materialCost  Float?
   designNotes String?
   imageUrls   String[] // Only Image URLs
   videoUrls   String[] // Only video URLs
   createdAt   DateTime @default(now())
   // Relations
   order       Order    @relation(fields: [orderId], references: [id])
+  measurements Measurement? // Each Cloth item can have one set of measurements
 
   @@map("cloths")
 }

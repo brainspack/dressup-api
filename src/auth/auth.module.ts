@@ -21,7 +21,7 @@ import { OtpModule } from '../otp/otp.module';
             };
           },
     }),
-    // forwardRef(() => OtpModule), // ✅ Import OtpModule correctly
+    forwardRef(() => OtpModule), // ✅ Import OtpModule correctly
     PrismaModule,
   ],
   controllers: [AuthController],
