@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import { CustomerService } from './customer.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { Role } from '@prisma/client';
 
 @Controller('customers')
 @UseGuards(JwtAuthGuard)
@@ -71,5 +73,11 @@ export class CustomerController {
       console.error('Update customer error:', error);
       throw new InternalServerErrorException(error.message || 'Failed to update customer');
     }
+  }
+
+  @Get()
+  @Roles(Role.SUPER_ADMIN)
+  async getAllCustomers() {
+    return this.customerService.findAll();
   }
 }

@@ -143,4 +143,24 @@ export class CustomerService {
       throw new InternalServerErrorException(error.message || 'Failed to update customer');
     }
   }
+
+  async findAll() {
+    try {
+      // Return all customers, excluding soft-deleted ones
+      return await this.prisma.customer.findMany({
+        where: { deletedAt: null },
+        include: {
+          measurements: true,
+          orders: true,
+          shop: {
+            select: { id: true, name: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    } catch (error) {
+      console.error('Find all customers error:', error);
+      throw new InternalServerErrorException('Failed to fetch all customers');
+    }
+  }
 }

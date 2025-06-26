@@ -30,6 +30,14 @@ export class MeasurementService {
         sleeveLength: data.sleeveLength ? Number(data.sleeveLength) : null,
         inseam: data.inseam ? Number(data.inseam) : null,
         neck: data.neck ? Number(data.neck) : null,
+        armhole: data.armhole ? Number(data.armhole) : null,
+        bicep: data.bicep ? Number(data.bicep) : null,
+        wrist: data.wrist ? Number(data.wrist) : null,
+        outseam: data.outseam ? Number(data.outseam) : null,
+        thigh: data.thigh ? Number(data.thigh) : null,
+        knee: data.knee ? Number(data.knee) : null,
+        calf: data.calf ? Number(data.calf) : null,
+        ankle: data.ankle ? Number(data.ankle) : null,
       };
 
       console.log('Creating measurement with data:', measurementData);

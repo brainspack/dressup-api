@@ -71,4 +71,23 @@ export class TailorService {
     const shops = await this.shopService.findByOwner(ownerId);
     return shops.length > 0 ? shops[0] : null;
   }
+
+  async findById(id: string) {
+    return this.prisma.tailor.findUnique({
+      where: { id, deletedAt: null },
+    });
+  }
+
+  async findAll() {
+    try {
+      // Return all tailors, excluding soft-deleted ones
+      return await this.prisma.tailor.findMany({
+        where: { deletedAt: null }
+        // No orderBy, as createdAt may not exist
+      });
+    } catch (error) {
+      console.error('Find all tailors error:', error);
+      throw new InternalServerErrorException('Failed to fetch all tailors');
+    }
+  }
 }

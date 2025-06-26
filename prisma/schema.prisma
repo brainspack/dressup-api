@@ -49,6 +49,7 @@ model User {
 
 model Shop {
   id            String   @id @default(uuid())
+  serialNumber  Int      @unique @default(autoincrement())
   name          String
   phone         String   @unique @default("")
   address       String   @default("")
@@ -69,6 +70,7 @@ model Shop {
 
 model Tailor {
   id           String @id @default(uuid())
+  serialNumber Int    @unique @default(autoincrement())
   name         String
   mobileNumber String @unique
   shopId       String
@@ -82,8 +84,9 @@ model Tailor {
 
 model Customer {
   id           String   @id @default(uuid())
+  serialNumber Int      @unique @default(autoincrement())
   name         String
-  mobileNumber String @unique
+  mobileNumber String   @unique
   address      String?
   createdAt    DateTime @default(now())
   shopId       String
@@ -110,6 +113,15 @@ model Measurement {
   sleeveLength Float?
   inseam       Float?
   neck         Float?
+  // New fields for more detailed measurements
+  armhole      Float?   // Around the armpit
+  bicep        Float?   // Around the fullest part of the upper arm
+  wrist        Float?   // Around the wrist
+  outseam      Float?   // From waist to ankle (outer side of leg)
+  thigh        Float?   // Around the fullest part of the upper leg
+  knee         Float?   // Around the knee
+  calf         Float?   // Around the fullest part of the lower leg
+  ankle        Float?   // Around the ankle
   createdAt    DateTime @default(now())
   deletedAt    DateTime?   // Soft delete field
 
@@ -123,6 +135,7 @@ model Measurement {
 
 model Order {
   id           String      @id @default(uuid())
+  serialNumber Int         @unique @default(autoincrement())
   customerId   String
   shopId       String
   tailorName   String? // Only store tailor name & number

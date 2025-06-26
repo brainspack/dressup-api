@@ -24,29 +24,6 @@ export class TailorController {
     }
   }
 
-  @Get()
-  @Roles(Role.SHOP_OWNER)
-  async getTailors(@Request() req, @Query('shopId') shopId?: string) {
-    try {
-      if (shopId) {
-        const tailors = await this.tailorService.findByShop(shopId);
-        console.log('Found tailors:', tailors);
-        return tailors;
-      } else {
-        const userShop = await this.tailorService.getShopByOwner(req.user.userId);
-        if (!userShop) {
-          throw new Error('No shop found for this user');
-        }
-        const tailors = await this.tailorService.findByShop(userShop.id);
-        console.log('Found tailors:', tailors);
-        return tailors;
-      }
-    } catch (error) {
-      console.error('Get tailors error:', error);
-      throw new InternalServerErrorException(error.message || 'Failed to fetch tailors');
-    }
-  }
-
   @Delete(':id')
   @Roles(Role.SHOP_OWNER)
   async softDeleteTailor(@Param('id') id: string) {
@@ -68,5 +45,20 @@ export class TailorController {
       console.error('Update tailor error:', error);
       throw new InternalServerErrorException(error.message || 'Failed to update tailor');
     }
+  }
+
+  @Get(':id')
+  async getTailorById(@Param('id') id: string) {
+    try {
+      return await this.tailorService.findById(id);
+    } catch (error) {
+      throw new InternalServerErrorException(error.message || 'Failed to fetch tailor');
+    }
+  }
+
+  @Get()
+  @Roles(Role.SUPER_ADMIN, Role.SHOP_OWNER)
+  async getAllTailors() {
+    return this.tailorService.findAll();
   }
 }
