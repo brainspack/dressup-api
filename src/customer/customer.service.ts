@@ -78,7 +78,7 @@ export class CustomerService {
         }
       });
 
-      console.log(`Found ${customers.length} customers across ${shopIds.length} shops`);
+    
       return customers;
     } catch (error) {
       console.error('Find customers error:', error);

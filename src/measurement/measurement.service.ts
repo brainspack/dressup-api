@@ -40,7 +40,7 @@ export class MeasurementService {
         ankle: data.ankle ? Number(data.ankle) : null,
       };
 
-      console.log('Creating measurement with data:', measurementData);
+   
 
       return await this.prisma.measurement.create({
         data: measurementData,
@@ -56,7 +56,7 @@ export class MeasurementService {
 
   async findByCustomer(customerId: string) {
     try {
-      console.log('Finding measurements for customer:', customerId);
+  
       const measurements = await this.prisma.measurement.findMany({
         where: {
           customerId,
@@ -66,7 +66,7 @@ export class MeasurementService {
           createdAt: 'desc', // Get most recent first
         },
       });
-      console.log('Found measurements:', measurements);
+    
       return measurements;
     } catch (error) {
       console.error('Error finding measurements:', error);
@@ -76,14 +76,14 @@ export class MeasurementService {
 
   async findByOrder(orderId: string) {
     try {
-      console.log('Finding measurements for order:', orderId);
+    
       const measurements = await this.prisma.measurement.findMany({
         where: {
           orderId,
           deletedAt: null, // Only get non-deleted measurements
         },
       });
-      console.log('Found order measurements:', measurements);
+     
       return measurements;
     } catch (error) {
       console.error('Error finding order measurements:', error);

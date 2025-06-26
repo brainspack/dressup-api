@@ -92,7 +92,6 @@ export class OrderService {
           where: { orderId: id },
         });
 
-        console.log('Fetched measurements for order:', measurements.length, measurements);
 
         // Group measurements by clothId
         const measurementsByClothId = measurements.reduce((acc, measurement) => {
@@ -106,7 +105,7 @@ export class OrderService {
           return acc;
         }, {} as Record<string, any[]>);
 
-        console.log('Measurements grouped by clothId:', measurementsByClothId);
+      
 
         // Transform the data to nest measurements within clothes
         const result = {
@@ -117,13 +116,7 @@ export class OrderService {
           })),
         };
 
-        console.log('Final order with nested measurements:', result.clothes.map(c => ({
-          id: c.id,
-          type: c.type,
-          measurementsCount: c.measurements.length,
-          measurements: c.measurements
-        })));
-
+    
         return result;
       }
       return order;
@@ -245,8 +238,7 @@ export class OrderService {
             orderBy: { createdAt: 'asc' }, // Ensure consistent ordering
           });
           
-          console.log('Created clothes for measurements:', createdClothes.length);
-          console.log('Measurements to create:', dto.measurements.length);
+       
           
           // Always save all measurements, even if they have all null values
           for (let i = 0; i < dto.measurements.length; i++) {
@@ -254,7 +246,7 @@ export class OrderService {
             const correspondingCloth = createdClothes[i];
             
             if (correspondingCloth) {
-              console.log(`Creating measurement ${i} for cloth ${correspondingCloth.id}`);
+         
               await prisma.measurement.create({
                 data: {
                   customerId: order.customerId, // Measurements are also linked to customer

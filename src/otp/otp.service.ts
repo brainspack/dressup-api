@@ -52,7 +52,7 @@ export class OtpService {
       //   from: this.config.get('TWILIO_PHONE_NUMBER'),
       //   to: mobileNumber,
       // });
-      console.log(`OTP sent to ${mobileNumber}: ${otp}`); // Debugging purpose
+  
       
     } catch (error) {
       throw new InternalServerErrorException('Failed to send OTP. Please try again.');
@@ -77,8 +77,7 @@ export class OtpService {
         where: { mobileNumber },
         data: { otp: null, otpExpiresAt: null },
       });
-      console.log(`OTP submitted: ${enteredOtp}`);
-      console.log('User from DB:', user);
+    
       return user;
     } catch (error) {
       throw new BadRequestException(error.message || 'OTP verification failed');
@@ -162,7 +161,7 @@ export class OtpService {
 //         }
 //       );
 
-//       console.log(`WhatsApp OTP sent: ${response.data}`);
+//    
 //     } catch (error) {
 //       console.error('WhatsApp API Error:', error.response?.data || error.message);
 //       throw new InternalServerErrorException('Failed to send OTP via WhatsApp.');

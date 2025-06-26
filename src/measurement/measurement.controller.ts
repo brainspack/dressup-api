@@ -10,23 +10,23 @@ export class MeasurementController {
 
   @Post('add')
   async addMeasurement(@Body() data: Partial<Measurement>, @Request() req) {
-    console.log('Received measurement data:', data);
+ 
     return this.measurementService.create(data, req.user.id);
   }
 
   @Get('customer/:customerId')
   async getMeasurements(@Param('customerId') customerId: string, @Request() req) {
-    console.log('Fetching measurements for customer:', customerId);
+  
     const measurements = await this.measurementService.findByCustomer(customerId);
-    console.log('Found measurements:', measurements);
+
     return measurements;
   }
 
   @Get('order/:orderId')
   async getOrderMeasurements(@Param('orderId') orderId: string) {
-    console.log('Fetching measurements for order:', orderId);
+   
     const measurements = await this.measurementService.findByOrder(orderId);
-    console.log('Found order measurements:', measurements);
+  
     return measurements;
   }
 }
