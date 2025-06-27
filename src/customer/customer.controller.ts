@@ -80,4 +80,13 @@ export class CustomerController {
   async getAllCustomers() {
     return this.customerService.findAll();
   }
+
+  @Get('by-shop/:shopId')
+  async getCustomersByShop(@Param('shopId') shopId: string) {
+    try {
+      return await this.customerService.findByShop(shopId);
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to fetch customers for shop');
+    }
+  }
 }

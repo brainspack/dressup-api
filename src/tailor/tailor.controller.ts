@@ -61,4 +61,13 @@ export class TailorController {
   async getAllTailors() {
     return this.tailorService.findAll();
   }
+
+  @Get('by-shop/:shopId')
+  async getTailorsByShop(@Param('shopId') shopId: string) {
+    try {
+      return await this.tailorService.findByShop(shopId);
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to fetch tailors for shop');
+    }
+  }
 }

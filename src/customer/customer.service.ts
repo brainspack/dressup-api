@@ -163,4 +163,20 @@ export class CustomerService {
       throw new InternalServerErrorException('Failed to fetch all customers');
     }
   }
+
+  async findByShop(shopId: string) {
+    try {
+      return await this.prisma.customer.findMany({
+        where: { shopId, deletedAt: null },
+        include: {
+          measurements: true,
+          orders: true,
+          shop: { select: { id: true, name: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to fetch customers for shop');
+    }
+  }
 }
