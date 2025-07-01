@@ -4,11 +4,12 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RoleGuard } from '../auth/role.guard';
 import { SetMetadata } from '@nestjs/common';
 import { Role } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('shops')
 @UseGuards(JwtAuthGuard, RoleGuard)
 export class ShopController {
-  constructor(private readonly shopService: ShopService) {}
+  constructor(private readonly shopService: ShopService, private readonly prisma: PrismaService) {}
 
   @Post('create')
   @SetMetadata('roles', [Role.SUPER_ADMIN, Role.SHOP_OWNER])
@@ -19,7 +20,31 @@ export class ShopController {
   @Get('my-shops')
   @SetMetadata('roles', [Role.SHOP_OWNER])
   async getShops(@Request() req) {
-    return this.shopService.findByOwner(req.user.userId);
+    // Find by ownerId
+    let shops = await this.shopService.findByOwner(req.user.userId);
+    // If no shops found, try by phone
+    if (!shops || shops.length === 0) {
+      const user = await this.prisma.user.findUnique({ where: { id: req.user.userId } });
+      if (user) {
+        shops = await this.prisma.shop.findMany({
+          where: { phone: user.mobileNumber, deletedAt: null },
+          include: {
+            customers: true,
+            tailors: true,
+            orders: true,
+            owner: {
+              select: {
+                id: true,
+                name: true,
+                mobileNumber: true,
+                role: true
+              }
+            }
+          }
+        });
+      }
+    }
+    return shops;
   }
 
   // New API to get single shop by ID

@@ -175,37 +175,31 @@ export class OrderService {
       const updatedOrder = await this.prisma.$transaction(async (prisma) => {
         // 1. Convert date strings to Date objects for Prisma
         const orderDate = dto.orderDate ? new Date(dto.orderDate) : undefined;
-        const deliveryDate = dto.deliveryDate ? new Date(dto.deliveryDate) : null;
+        const deliveryDate = dto.deliveryDate ? new Date(dto.deliveryDate) : undefined;
 
-        // 2. Update the main Order record
+        // 2. Update the main Order record (only update provided fields)
         const order = await prisma.order.update({
           where: { id },
           data: {
-            tailorName: dto.tailorName,
-            tailorNumber: dto.tailorNumber,
-            status: dto.status,
-            orderDate: orderDate,
-            deliveryDate: deliveryDate,
+            ...(dto.tailorName !== undefined && { tailorName: dto.tailorName }),
+            ...(dto.tailorNumber !== undefined && { tailorNumber: dto.tailorNumber }),
+            ...(dto.status !== undefined && { status: dto.status }),
+            ...(orderDate !== undefined && { orderDate }),
+            ...(deliveryDate !== undefined && { deliveryDate }),
             // customerId and shopId are not updated here as they are typically set once
           },
         });
 
-        // 3. Handle Measurements updates FIRST: Delete existing measurements before clothes
+        // 3. Handle Measurements updates ONLY if provided
         if (dto.measurements) {
-          await prisma.measurement.deleteMany({
-            where: { orderId: id },
-          });
+          await prisma.measurement.deleteMany({ where: { orderId: id } });
         }
 
-        // 4. Handle Clothes updates: Delete existing and create new ones
+        // 4. Handle Clothes updates ONLY if provided
         if (dto.clothes) {
-          await prisma.cloth.deleteMany({
-            where: { orderId: id },
-          });
-          
-          // Create clothes individually to ensure proper ordering
+          await prisma.cloth.deleteMany({ where: { orderId: id } });
           for (const cloth of dto.clothes) {
-            const { measurements, ...clothData } = cloth; // Destructure to exclude measurements
+            const { measurements, ...clothData } = cloth;
             await prisma.cloth.create({
               data: {
                 ...clothData,
@@ -215,11 +209,9 @@ export class OrderService {
           }
         }
 
-        // 5. Handle Costs updates: Delete existing and create new ones
+        // 5. Handle Costs updates ONLY if provided
         if (dto.costs) {
-          await prisma.cost.deleteMany({
-            where: { orderId: id },
-          });
+          await prisma.cost.deleteMany({ where: { orderId: id } });
           if (dto.costs.length > 0) {
             await prisma.cost.createMany({
               data: dto.costs.map((cost: any) => ({
@@ -230,28 +222,21 @@ export class OrderService {
           }
         }
 
-        // 6. Create new measurements after clothes are created
+        // 6. Create new measurements after clothes are created ONLY if provided
         if (dto.measurements && dto.measurements.length > 0) {
-          // Get the created clothes to link measurements
           const createdClothes = await prisma.cloth.findMany({
             where: { orderId: order.id },
-            orderBy: { createdAt: 'asc' }, // Ensure consistent ordering
+            orderBy: { createdAt: 'asc' },
           });
-          
-       
-          
-          // Always save all measurements, even if they have all null values
           for (let i = 0; i < dto.measurements.length; i++) {
             const measurement = dto.measurements[i];
             const correspondingCloth = createdClothes[i];
-            
             if (correspondingCloth) {
-         
               await prisma.measurement.create({
                 data: {
-                  customerId: order.customerId, // Measurements are also linked to customer
+                  customerId: order.customerId,
                   orderId: order.id,
-                  clothId: correspondingCloth.id, // Link to the specific cloth
+                  clothId: correspondingCloth.id,
                   height: measurement.height !== undefined ? measurement.height : null,
                   chest: measurement.chest !== undefined ? measurement.chest : null,
                   waist: measurement.waist !== undefined ? measurement.waist : null,
@@ -270,8 +255,6 @@ export class OrderService {
                   ankle: measurement.ankle !== undefined ? measurement.ankle : null,
                 } as any,
               });
-            } else {
-              console.error(`No corresponding cloth found for measurement ${i}`);
             }
           }
         }

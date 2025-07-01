@@ -66,7 +66,7 @@ export class AuthService {
   }
 
   // Verify OTP and generate JWT token
-  async verifyOtp(mobileNumber: string, enteredOtp: string): Promise<{ message: string; accessToken: string }> {
+  async verifyOtp(mobileNumber: string, enteredOtp: string): Promise<{ message: string; accessToken: string; user: any }> {
     try {
       // Find user first to get role
       const user = await this.prisma.user.findUnique({ 
@@ -107,9 +107,27 @@ export class AuthService {
       };
       const accessToken = this.jwtService.sign(payload, { secret });
 
+      // Fetch shopId for this user (assuming 1:1 mapping)
+      let shop = await this.prisma.shop.findFirst({
+        where: { ownerId: user.id },
+        select: { id: true }
+      });
+      // If not found, try to find a shop where the phone matches the user's mobileNumber
+      if (!shop) {
+        shop = await this.prisma.shop.findFirst({
+          where: { phone: user.mobileNumber },
+          select: { id: true }
+        });
+      }
+
       return { 
         message: 'Login successful', 
-        accessToken
+        accessToken,
+        user: {
+          phone: user.mobileNumber,
+          role: user.role,
+          shopId: shop ? shop.id : null
+        }
       };
     } catch (error) {
       if (error instanceof BadRequestException) {
