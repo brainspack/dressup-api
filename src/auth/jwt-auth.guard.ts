@@ -19,9 +19,9 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const secret = this.configService.get<string>('JWT_SECRET') || 'default_secret';
       const decoded = this.jwtService.verify(token, { secret });
-      console.log('Decoded JWT token:', decoded);
+
       request.user = decoded;
-      console.log('Request user after decoding:', request.user);
+    
       return true;
     } catch (error) {
       console.error('JWT verification error:', error);

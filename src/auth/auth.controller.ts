@@ -3,7 +3,6 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { Roles } from './roles.decorator';
 import { RoleGuard } from './role.guard';
-import { Role } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
@@ -52,7 +51,7 @@ export class AuthController {
    */
   @Post('create-user')
   @UseGuards(JwtAuthGuard, RoleGuard)
-  @Roles(Role.SUPER_ADMIN) // Only SUPER_ADMIN can create users with specific roles
+  @Roles('SUPER_ADMIN') // Only SUPER_ADMIN can create users with specific roles
   async createNewUser(
     @Body('mobileNumber') mobileNumber: string,
     @Body('role') roleString: string, // Receive as string first
@@ -62,12 +61,11 @@ export class AuthController {
       throw new BadRequestException('Mobile number and role are required.');
     }
 
-    // Ensure the received role string is a valid Role enum member
-    const role: Role = roleString as Role; // Explicitly cast to Role enum
-
-    if (!Object.values(Role).includes(role)) {
-      throw new BadRequestException(`Invalid role: ${roleString}. Must be one of ${Object.values(Role).join(', ')}`);
+    const allowedRoles = ['SUPER_ADMIN', 'SHOP_OWNER'];
+    if (!allowedRoles.includes(roleString)) {
+      throw new BadRequestException(`Invalid role: ${roleString}. Must be one of ${allowedRoles.join(', ')}`);
     }
+    const role = roleString;
 
     try {
       return await this.authService.createNormalUser(mobileNumber, role, name);

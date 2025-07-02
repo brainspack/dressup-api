@@ -10,14 +10,13 @@
 
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from '@prisma/client';
 
 @Injectable()
 export class RoleGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<Role[]>('roles', [
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>('roles', [
       context.getHandler(),
       context.getClass(),
     ]);
@@ -36,7 +35,7 @@ export class RoleGuard implements CanActivate {
     }
 
     // SUPER_ADMIN bypass: If the user is a SUPER_ADMIN, they can access any route
-    if (user.role === Role.SUPER_ADMIN) {
+    if (user.role === 'SUPER_ADMIN') {
       return true;
     }
 

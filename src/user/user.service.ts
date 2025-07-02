@@ -6,6 +6,12 @@ export class UserService {
   constructor(private prisma: PrismaService) {}
 
   async findAll() {
-    return this.prisma.user.findMany();
+    const users = await this.prisma.user.findMany({
+      include: { role: true }
+    });
+    return users.map(user => ({
+      ...user,
+      role: user.role?.name || null,
+    }));
   }
 }

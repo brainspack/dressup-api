@@ -27,18 +27,30 @@ export class OtpService {
       const expiry = new Date();
       expiry.setMinutes(expiry.getMinutes() + 5); // OTP expires in 5 minutes
 
+      // Check if SHOP_OWNER role exists, if not, create it
+      let roleRecord = await this.prisma['role'].findUnique({ where: { name: 'SHOP_OWNER' as any } });
+      if (!roleRecord) {
+        roleRecord = await this.prisma['role'].create({
+          data: {
+            name: 'SHOP_OWNER',
+            permissions: { can_add: true, can_update: true, can_view: true, can_delete: true },
+          },
+        });
+      }
+
       await this.prisma.user.upsert({
         where: { mobileNumber },
         update: { otp, otpExpiresAt: expiry },
         create: {
           mobileNumber,
-          role: 'SHOP_OWNER',
+          role: { connect: { id: roleRecord.id } },
           language: 'HI',
           otp,
           otpExpiresAt: expiry,
         },
       });
     } catch (error) {
+      console.error('OTP Save Error:', error);
       throw new InternalServerErrorException('Failed to store OTP. Please try again.');
     }
   }

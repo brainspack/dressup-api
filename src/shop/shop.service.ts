@@ -57,8 +57,16 @@ export class ShopService {
           }
         },
       });
-      console.log(`Found ${shops.length} shops for ownerId: ${ownerId}`);
-      return shops;
+      // Map owner.role to string if it's an object
+      const mappedShops = shops.map(shop => ({
+        ...shop,
+        owner: shop.owner ? {
+          ...shop.owner,
+          role: typeof shop.owner.role === 'object' && shop.owner.role !== null ? shop.owner.role.name : shop.owner.role
+        } : null
+      }));
+      console.log(`Found ${mappedShops.length} shops for ownerId: ${ownerId}`);
+      return mappedShops;
     } catch (error) {
       console.error('Find shops error:', error);
       throw new InternalServerErrorException('Failed to fetch shops');
@@ -102,6 +110,12 @@ export class ShopService {
       const deliveredOrders = shop.orders.filter(order => order.status === 'DELIVERED').length;
       const pendingOrders = shop.orders.filter(order => order.status === 'PENDING' || order.status === 'IN_PROGRESS').length;
 
+      // Map owner.role to string if it's an object
+      const mappedOwner = shop.owner ? {
+        ...shop.owner,
+        role: typeof shop.owner.role === 'object' && shop.owner.role !== null ? shop.owner.role.name : shop.owner.role
+      } : null;
+
       return {
         ...shop,
         totalActiveCustomers,
@@ -113,6 +127,7 @@ export class ShopService {
         customers: undefined, 
         tailors: undefined, 
         orders: undefined,
+        owner: mappedOwner,
       };
     } catch (error) {
       console.error('Find shop by ID error:', error);
@@ -122,7 +137,7 @@ export class ShopService {
 
   async findAll() {
     try {
-      return await this.prisma.shop.findMany({
+      const shops = await this.prisma.shop.findMany({
         where: { deletedAt: null },
         include: {
           customers: true,
@@ -138,6 +153,14 @@ export class ShopService {
           },
         },
       });
+      // Map owner.role to string if it's an object
+      return shops.map(shop => ({
+        ...shop,
+        owner: shop.owner ? {
+          ...shop.owner,
+          role: typeof shop.owner.role === 'object' && shop.owner.role !== null ? shop.owner.role.name : shop.owner.role
+        } : null
+      }));
     } catch (error) {
       console.error('Find all shops error:', error);
       throw new InternalServerErrorException('Failed to fetch all shops');

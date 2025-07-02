@@ -1,7 +1,6 @@
 import { Controller, Post, Get, Body, UseGuards, Request, InternalServerErrorException, Query, Delete, Param, Patch } from '@nestjs/common';
 import { TailorService } from './tailor.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Role } from '@prisma/client';
 import { Roles } from '../auth/roles.decorator';
 import { RoleGuard } from '../auth/role.guard';
 
@@ -11,7 +10,7 @@ export class TailorController {
   constructor(private readonly tailorService: TailorService) {}
 
   @Post()
-  @Roles(Role.SHOP_OWNER)
+  @Roles('SUPER_ADMIN', 'SHOP_OWNER')
   async createTailor(@Body() tailorData: any) {
     try {
       if (!tailorData.name || !tailorData.mobileNumber || !tailorData.shopId) {
@@ -25,7 +24,7 @@ export class TailorController {
   }
 
   @Delete(':id')
-  @Roles(Role.SHOP_OWNER)
+  @Roles('SUPER_ADMIN', 'SHOP_OWNER')
   async softDeleteTailor(@Param('id') id: string) {
     try {
       await this.tailorService.softDelete(id);
@@ -37,7 +36,7 @@ export class TailorController {
   }
 
   @Patch(':id')
-  @Roles(Role.SHOP_OWNER)
+  @Roles('SUPER_ADMIN', 'SHOP_OWNER')
   async updateTailor(@Param('id') id: string, @Body() data: any) {
     try {
       return await this.tailorService.update(id, data);
@@ -57,7 +56,7 @@ export class TailorController {
   }
 
   @Get()
-  @Roles(Role.SUPER_ADMIN, Role.SHOP_OWNER)
+  @Roles('SUPER_ADMIN', 'SHOP_OWNER')
   async getAllTailors() {
     return this.tailorService.findAll();
   }

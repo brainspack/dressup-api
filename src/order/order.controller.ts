@@ -10,7 +10,6 @@ import {
   } from '@nestjs/common';
   import { OrderService } from './order.service';
   import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-  import { Role } from '@prisma/client';
   import { Roles } from '../auth/roles.decorator';
   import { RoleGuard } from 'src/auth/role.guard';
   
@@ -20,31 +19,31 @@ import {
     constructor(private readonly orderService: OrderService) {}
   
     @Post()
-    @Roles(Role.SHOP_OWNER)
+    @Roles('SUPER_ADMIN', 'SHOP_OWNER')
     create(@Body() dto: any) {
       return this.orderService.createOrder(dto);
     }
   
     @Get(':id')
-    @Roles(Role.SHOP_OWNER, Role.CUSTOMER)
+    @Roles('SUPER_ADMIN', 'SHOP_OWNER', 'CUSTOMER')
     getById(@Param('id') id: string) {
       return this.orderService.getOrderById(id);
     }
   
     @Get()
-    @Roles(Role.SHOP_OWNER)
+    @Roles('SUPER_ADMIN', 'SHOP_OWNER')
     getAll() {
       return this.orderService.getAllOrders();
     }
   
     @Patch(':id')
-    @Roles(Role.SHOP_OWNER)
+    @Roles('SUPER_ADMIN', 'SHOP_OWNER')
     update(@Param('id') id: string, @Body() dto: any) {
       return this.orderService.updateOrder(id, dto);
     }
   
     @Delete(':id')
-    @Roles(Role.SHOP_OWNER)
+    @Roles('SUPER_ADMIN', 'SHOP_OWNER')
     softDelete(@Param('id') id: string) {
       return this.orderService.softDeleteOrder(id);
     }

@@ -13,11 +13,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  SUPER_ADMIN
-  SHOP_OWNER
-  CUSTOMER
-}
+
 
 enum Language {
   EN
@@ -31,11 +27,24 @@ enum OrderStatus {
   CANCELLED
 }
 
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        RoleName @unique
+  permissions Json
+  users       User[]
+}
+
+enum RoleName {
+  SUPER_ADMIN
+  SHOP_OWNER
+}
+
 model User {
   id           String   @id @default(uuid())
   name         String?
   mobileNumber String   @unique
-  role         Role
+  roleId       Int
+  role         Role       @relation(fields: [roleId], references: [id])
   language     Language @default(HI)
   otp           String?  // OTP stored temporarily
   otpExpiresAt  DateTime? // OTP expiration time
@@ -186,3 +195,34 @@ model Cost {
 
   @@map("cost")
 }
+
+//
+// To seed required roles, create a file prisma/seed.ts with the following content:
+//
+// import { PrismaClient } from '@prisma/client';
+// const prisma = new PrismaClient();
+//
+// async function main() {
+//   await prisma.role.upsert({
+//     where: { name: 'SUPER_ADMIN' },
+//     update: {},
+//     create: {
+//       name: 'SUPER_ADMIN',
+//       permissions: { can_add: true, can_update: true, can_view: true, can_delete: true },
+//     },
+//   });
+//   await prisma.role.upsert({
+//     where: { name: 'SHOP_OWNER' },
+//     update: {},
+//     create: {
+//       name: 'SHOP_OWNER',
+//       permissions: { can_add: true, can_update: true, can_view: true, can_delete: true },
+//     },
+//   });
+// }
+//
+// main().catch(e => { console.error(e); process.exit(1); }).finally(() => prisma.$disconnect());
+//
+// Then run:
+// npx tsx prisma/seed.ts
+//

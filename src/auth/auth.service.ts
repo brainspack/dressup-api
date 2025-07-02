@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, InternalServerErrorException, Inject, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Language, Role, User } from '@prisma/client';
+import { Language, User, $Enums } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { OtpService } from '../otp/otp.service';
 
@@ -17,12 +17,15 @@ export class AuthService {
   ) {}
 
   // Validate or create a new user
-  async validateOrCreateUser(mobileNumber: string, role: Role = Role.SHOP_OWNER, language: Language = Language.HI): Promise<User> {
+  async validateOrCreateUser(mobileNumber: string, role: string = 'SHOP_OWNER', language: Language = Language.HI): Promise<User> {
     try {
-      let user = await this.prisma.user.findUnique({ where: { mobileNumber } });
+      let user = await this.prisma['user'].findUnique({ where: { mobileNumber } });
       if (!user) {
-        user = await this.prisma.user.create({
-          data: { mobileNumber, role, language },
+        // Find the role by name to get its id
+        const roleRecord = await this.prisma['role'].findUnique({ where: { name: role as any } });
+        if (!roleRecord) throw new Error('Role not found');
+        user = await this.prisma['user'].create({
+          data: { mobileNumber, role: { connect: { id: roleRecord.id } }, language },
         });
       }
       return user;
@@ -32,15 +35,17 @@ export class AuthService {
   }
 
   // New method to create a user with a specific role directly (bypassing OTP for initial setup)
-  async createNormalUser(mobileNumber: string, role: Role, name?: string): Promise<User> {
+  async createNormalUser(mobileNumber: string, role: string, name?: string): Promise<User> {
     try {
-      const existingUser = await this.prisma.user.findUnique({ where: { mobileNumber } });
+      const existingUser = await this.prisma['user'].findUnique({ where: { mobileNumber } });
       if (existingUser) {
         throw new BadRequestException('User with this mobile number already exists.');
       }
-
-      const newUser = await this.prisma.user.create({
-        data: { mobileNumber, role, name: name || null },
+      // Find the role by name to get its id
+      const roleRecord = await this.prisma['role'].findUnique({ where: { name: role as any } });
+      if (!roleRecord) throw new Error('Role not found');
+      const newUser = await this.prisma['user'].create({
+        data: { mobileNumber, role: { connect: { id: roleRecord.id } }, name: name || null },
       });
       return newUser;
     } catch (error) {
@@ -69,7 +74,7 @@ export class AuthService {
   async verifyOtp(mobileNumber: string, enteredOtp: string): Promise<{ message: string; accessToken: string; user: any }> {
     try {
       // Find user first to get role
-      const user = await this.prisma.user.findUnique({ 
+      const user = await this.prisma['user'].findUnique({ 
         where: { mobileNumber },
         select: {
           id: true,
@@ -93,28 +98,30 @@ export class AuthService {
       }
 
       // Clear OTP after successful verification
-      await this.prisma.user.update({
+      await this.prisma['user'].update({
         where: { mobileNumber },
         data: { otp: null, otpExpiresAt: null },
       });
 
       // Generate JWT token with role
       const secret = this.configService.get<string>('JWT_SECRET') || 'default_secret';
+      // Always send role as string
+      const roleString = typeof user.role === 'object' && user.role !== null ? user.role.name : user.role;
       const payload = { 
         userId: user.id, 
         mobileNumber: user.mobileNumber, 
-        role: user.role  // Make sure role is included
+        role: roleString
       };
       const accessToken = this.jwtService.sign(payload, { secret });
 
       // Fetch shopId for this user (assuming 1:1 mapping)
-      let shop = await this.prisma.shop.findFirst({
+      let shop = await this.prisma['shop'].findFirst({
         where: { ownerId: user.id },
         select: { id: true }
       });
       // If not found, try to find a shop where the phone matches the user's mobileNumber
       if (!shop) {
-        shop = await this.prisma.shop.findFirst({
+        shop = await this.prisma['shop'].findFirst({
           where: { phone: user.mobileNumber },
           select: { id: true }
         });
@@ -125,7 +132,7 @@ export class AuthService {
         accessToken,
         user: {
           phone: user.mobileNumber,
-          role: user.role,
+          role: roleString,
           shopId: shop ? shop.id : null
         }
       };

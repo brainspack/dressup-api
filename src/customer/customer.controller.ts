@@ -13,7 +13,6 @@ import {
 import { CustomerService } from './customer.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
-import { Role } from '@prisma/client';
 
 @Controller('customers')
 @UseGuards(JwtAuthGuard)
@@ -76,7 +75,7 @@ export class CustomerController {
   }
 
   @Get()
-  @Roles(Role.SUPER_ADMIN)
+  @Roles('SUPER_ADMIN')
   async getAllCustomers() {
     return this.customerService.findAll();
   }
