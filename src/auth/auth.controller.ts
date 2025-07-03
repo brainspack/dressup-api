@@ -3,10 +3,17 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { Roles } from './roles.decorator';
 import { RoleGuard } from './role.guard';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { UnauthorizedException } from '@nestjs/common';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService
+  ) {}
 
   /**
    * 📌 Send OTP to user's mobile number
@@ -72,6 +79,19 @@ export class AuthController {
     } catch (error) {
       console.error('Error in createNewUser controller:', error);
       throw new InternalServerErrorException(error.message || 'Failed to create user.');
+    }
+  }
+
+  @Post('refresh-token')
+  async refreshToken(@Body('refreshToken') refreshToken: string) {
+    if (!refreshToken) throw new BadRequestException('Refresh token is required');
+    try {
+      // Decode to get userId from payload
+      const decoded: any = this.jwtService.verify(refreshToken, { secret: this.configService.get<string>('JWT_SECRET') || 'default_secret' });
+      const userId = decoded.userId;
+      return await this.authService.refreshTokens(userId, refreshToken);
+    } catch (err) {
+      throw new UnauthorizedException('Invalid refresh token');
     }
   }
 }

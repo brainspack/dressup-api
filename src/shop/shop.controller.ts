@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RoleGuard } from '../auth/role.guard';
 import { SetMetadata } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RoleName } from '@prisma/client';
 
 @Controller('shops')
 @UseGuards(JwtAuthGuard, RoleGuard)
@@ -18,9 +19,9 @@ export class ShopController {
 
   @Get('my-shops')
   @SetMetadata('roles', ['SUPER_ADMIN', 'SHOP_OWNER'])
-  async getShops(@Request() req) {
+  async getShops(@Request() req): Promise<any> {
     // Find by ownerId
-    let shops = await this.shopService.findByOwner(req.user.userId);
+    let shops = await this.shopService.findByOwner(req.user.userId) as any;
     // If no shops found, try by phone
     if (!shops || shops.length === 0) {
       const user = await this.prisma.user.findUnique({ where: { id: req.user.userId } });
@@ -36,14 +37,27 @@ export class ShopController {
                 id: true,
                 name: true,
                 mobileNumber: true,
-                role: true
+                role: { select: { name: true } }
               }
             }
           }
         });
       }
     }
-    return shops;
+    // Map owner.role to RoleName enum and satisfy TypeScript
+    shops = shops.map(shop => {
+      if (shop.owner && shop.owner.role && typeof shop.owner.role === 'object' && 'name' in shop.owner.role) {
+        return {
+          ...shop,
+          owner: {
+            ...shop.owner,
+            role: (shop.owner.role as { name: RoleName }).name as RoleName
+          }
+        };
+      }
+      return shop;
+    });
+    return shops as any;
   }
 
   // New API to get single shop by ID
@@ -72,3 +86,5 @@ export class ShopController {
     return this.shopService.update(id, data);
   }
 }
+
+

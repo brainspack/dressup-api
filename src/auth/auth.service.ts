@@ -19,6 +19,7 @@ export class AuthService {
   // Validate or create a new user
   async validateOrCreateUser(mobileNumber: string, role: string = 'SHOP_OWNER', language: Language = Language.HI): Promise<User> {
     try {
+      await this.ensureRolesExist();
       let user = await this.prisma['user'].findUnique({ where: { mobileNumber } });
       if (!user) {
         // Find the role by name to get its id
@@ -37,6 +38,7 @@ export class AuthService {
   // New method to create a user with a specific role directly (bypassing OTP for initial setup)
   async createNormalUser(mobileNumber: string, role: string, name?: string): Promise<User> {
     try {
+      await this.ensureRolesExist();
       const existingUser = await this.prisma['user'].findUnique({ where: { mobileNumber } });
       if (existingUser) {
         throw new BadRequestException('User with this mobile number already exists.');
@@ -71,7 +73,7 @@ export class AuthService {
   }
 
   // Verify OTP and generate JWT token
-  async verifyOtp(mobileNumber: string, enteredOtp: string): Promise<{ message: string; accessToken: string; user: any }> {
+  async verifyOtp(mobileNumber: string, enteredOtp: string): Promise<{ message: string; accessToken: string; refreshToken: string; user: any }> {
     try {
       // Find user first to get role
       const user = await this.prisma['user'].findUnique({ 
@@ -103,23 +105,22 @@ export class AuthService {
         data: { otp: null, otpExpiresAt: null },
       });
 
-      // Generate JWT token with role
-      const secret = this.configService.get<string>('JWT_SECRET') || 'default_secret';
-      // Always send role as string
+      // Generate JWT tokens with role
       const roleString = typeof user.role === 'object' && user.role !== null ? user.role.name : user.role;
       const payload = { 
         userId: user.id, 
         mobileNumber: user.mobileNumber, 
         role: roleString
       };
-      const accessToken = this.jwtService.sign(payload, { secret });
+      const { accessToken, refreshToken } = await this.generateTokens(payload);
+      await this.updateRefreshToken(user.id, refreshToken);
+      console.log('New refresh token in DB:', refreshToken);
 
       // Fetch shopId for this user (assuming 1:1 mapping)
       let shop = await this.prisma['shop'].findFirst({
         where: { ownerId: user.id },
         select: { id: true }
       });
-      // If not found, try to find a shop where the phone matches the user's mobileNumber
       if (!shop) {
         shop = await this.prisma['shop'].findFirst({
           where: { phone: user.mobileNumber },
@@ -130,6 +131,7 @@ export class AuthService {
       return { 
         message: 'Login successful', 
         accessToken,
+        refreshToken,
         user: {
           phone: user.mobileNumber,
           role: roleString,
@@ -142,5 +144,71 @@ export class AuthService {
       }
       throw new InternalServerErrorException('OTP verification failed. Please try again.');
     }
+  }
+
+  async ensureRolesExist() {
+    const rolesCount = await this.prisma.role.count();
+    if (rolesCount === 0) {
+      await this.prisma.role.createMany({
+        data: [
+          { name: 'SUPER_ADMIN', permissions: { all: true } },
+          { name: 'SHOP_OWNER', permissions: { all: false } },
+        ],
+        skipDuplicates: true,
+      });
+    }
+  }
+
+  // Store refresh token as plain text in DB
+  async updateRefreshToken(userId: string, refreshToken: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken },
+    });
+  }
+
+  // Validate refresh token (plain text)
+  async validateRefreshToken(userId: string, refreshToken: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.refreshToken) return false;
+    return user.refreshToken === refreshToken;
+  }
+
+  // Generate access and refresh tokens
+  async generateTokens(payload: any) {
+    const secret = this.configService.get<string>('JWT_SECRET') || 'default_secret';
+    const accessToken = this.jwtService.sign(payload, {
+      secret,
+      expiresIn: '7d', // 7 days for access token
+    });
+    // Add a unique value to the refresh token payload
+    const refreshPayload = { ...payload, tokenType: 'refresh', jti: Date.now() + Math.random() };
+    const refreshToken = this.jwtService.sign(refreshPayload, { secret, expiresIn: '10d' }); // 10 days for refresh token
+    return { accessToken, refreshToken };
+  }
+
+  // Refresh tokens logic
+  async refreshTokens(userId: string, refreshToken: string) {
+    console.log('\x1b[36m[AuthService] /auth/refresh-token called for user:', userId, '\x1b[0m');
+    const isValid = await this.validateRefreshToken(userId, refreshToken);
+    if (!isValid) {
+      console.log('\x1b[31m[AuthService] Invalid refresh token for user:', userId, '\x1b[0m');
+      throw new BadRequestException('Invalid refresh token');
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { role: true }
+    });
+    if (!user) throw new BadRequestException('User not found');
+    const roleString = typeof user.role === 'object' && user.role !== null ? user.role.name : user.role;
+    const payload = {
+      userId: user.id,
+      mobileNumber: user.mobileNumber,
+      role: roleString
+    };
+    const { accessToken, refreshToken: newRefreshToken } = await this.generateTokens(payload);
+    await this.updateRefreshToken(user.id, newRefreshToken);
+    console.log('\x1b[32m[AuthService] New tokens issued for user:', userId, '\x1b[0m');
+    return { accessToken, refreshToken: newRefreshToken };
   }
 }
