@@ -870,7 +870,7 @@
 
 "@napi-rs/nice-darwin-arm64@1.0.1":
   version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@napi-rs/nice-darwin-arm64/-/nice-darwin-arm64-1.0.1.tgz#d3c44c51b94b25a82d45803e2255891e833e787b"
+  resolved "https://registry.npmjs.org/@napi-rs/nice-darwin-arm64/-/nice-darwin-arm64-1.0.1.tgz"
   integrity sha512-91k3HEqUl2fsrz/sKkuEkscj6EAj3/eZNCLqzD2AA0TtVbkQi8nqxZCZDMkfklULmxLkMxuUdKe7RvG/T6s2AA==
 
 "@napi-rs/nice-darwin-x64@1.0.1":
@@ -935,7 +935,7 @@
 
 "@napi-rs/nice-win32-x64-msvc@1.0.1":
   version "1.0.1"
-  resolved "https://registry.npmjs.org/@napi-rs/nice-win32-x64-msvc/-/nice-win32-x64-msvc-1.0.1.tgz"
+  resolved "https://registry.yarnpkg.com/@napi-rs/nice-win32-x64-msvc/-/nice-win32-x64-msvc-1.0.1.tgz#37d8718b8f722f49067713e9f1e85540c9a3dd09"
   integrity sha512-JlF+uDcatt3St2ntBG8H02F1mM45i5SF9W+bIKiReVE6wiy3o16oBP/yxt+RZ+N6LbCImJXJ6bXNO2kn9AXicg==
 
 "@napi-rs/nice@^1.0.1":
@@ -1141,7 +1141,7 @@
 
 "@swc/core-darwin-arm64@1.11.13":
   version "1.11.13"
-  resolved "https://registry.yarnpkg.com/@swc/core-darwin-arm64/-/core-darwin-arm64-1.11.13.tgz#ebd30fa0cda7ad28fc471cd756402ff17801cfb4"
+  resolved "https://registry.npmjs.org/@swc/core-darwin-arm64/-/core-darwin-arm64-1.11.13.tgz"
   integrity sha512-loSERhLaQ9XDS+5Kdx8cLe2tM1G0HLit8MfehipAcsdctpo79zrRlkW34elOf3tQoVPKUItV0b/rTuhjj8NtHg==
 
 "@swc/core-darwin-x64@1.11.13":
@@ -1186,7 +1186,7 @@
 
 "@swc/core-win32-x64-msvc@1.11.13":
   version "1.11.13"
-  resolved "https://registry.npmjs.org/@swc/core-win32-x64-msvc/-/core-win32-x64-msvc-1.11.13.tgz"
+  resolved "https://registry.yarnpkg.com/@swc/core-win32-x64-msvc/-/core-win32-x64-msvc-1.11.13.tgz#0412620d8594a7d3e482d3e79d9e89d80f9a14c0"
   integrity sha512-+X5/uW3s1L5gK7wAo0E27YaAoidJDo51dnfKSfU7gF3mlEUuWH8H1bAy5OTt2mU4eXtfsdUMEVXSwhDlLtQkuA==
 
 "@swc/core@^1.10.7":
@@ -3203,7 +3203,7 @@ fs.realpath@^1.0.0:
 
 fsevents@^2.3.2, fsevents@~2.3.2:
   version "2.3.3"
-  resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-2.3.3.tgz#cac6407785d03675a2a5e1a5305c697b347d90d6"
+  resolved "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz"
   integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
 
 function-bind@^1.1.2:

@@ -25,12 +25,22 @@ export class CustomerService {
         throw new Error('Valid shop ID could not be determined');
       }
 
-      return await this.prisma.customer.create({
+      // Filter out invalid fields and only keep valid Customer model fields
+      const { email, measurements, ...validCustomerData } = data;
+      
+      // Create customer with only valid fields
+      const customer = await this.prisma.customer.create({
         data: {
-          ...data,
+          ...validCustomerData,
           shopId: targetShopId,
         },
       });
+
+      // TODO: Handle measurements separately if needed
+      // For now, we'll just create the customer without measurements
+      // Measurements can be added later when creating orders/clothes
+      
+      return customer;
     } catch (error) {
       console.error('Customer service error:', error);
       if (error.code === 'P2002') {

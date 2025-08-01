@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Language, User, $Enums } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import { OtpService } from '../otp/otp.service';
+import { ShopService } from '../shop/shop.service';
 
 @Injectable()
 export class AuthService {
@@ -13,7 +14,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     // @Inject(forwardRef(() => OtpService)) private readonly otpService: OtpService,
     @Inject(forwardRef(() => OtpService)) private readonly otpService: OtpService,
-
+    private readonly shopService: ShopService,
   ) {}
 
   // Validate or create a new user
@@ -28,6 +29,15 @@ export class AuthService {
         user = await this.prisma['user'].create({
           data: { mobileNumber, role: { connect: { id: roleRecord.id } }, language },
         });
+        
+        // Auto-create shop for new shop_owner users
+        if (role === 'SHOP_OWNER') {
+          await this.shopService.create({
+            name: `Shop of ${mobileNumber}`,
+            phone: mobileNumber,
+            address: 'Default Address',
+          }, user.id);
+        }
       }
       return user;
     } catch (error) {
@@ -49,6 +59,14 @@ export class AuthService {
       const newUser = await this.prisma['user'].create({
         data: { mobileNumber, role: { connect: { id: roleRecord.id } }, name: name || null },
       });
+      // Auto-create shop for shop_owner
+      if (role === 'SHOP_OWNER') {
+        await this.shopService.create({
+          name: name || `Shop of ${mobileNumber}`,
+          phone: mobileNumber,
+          address: 'Default Address',
+        }, newUser.id);
+      }
       return newUser;
     } catch (error) {
       console.error('Error creating normal user:', error);

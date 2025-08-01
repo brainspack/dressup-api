@@ -12,6 +12,7 @@ import { ShopModule } from './shop/shop.module';
 import { OrderModule } from './order/order.module';
 import { MeasurementModule } from './measurement/measurement.module';
 import { TailorModule } from './tailor/tailor.module';
+import { OtpModule } from './otp/otp.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { TailorModule } from './tailor/tailor.module';
     ConfigModule.forRoot(),
     UserModule,
     AuthModule,
+    OtpModule,
     ShopModule,
     TailorModule,
     CustomerModule,

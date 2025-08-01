@@ -2,12 +2,18 @@ import { Injectable, InternalServerErrorException, BadRequestException, Inject, 
 import { PrismaService } from '../../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth/auth.service';
+import { ShopService } from '../shop/shop.service';
 
 @Injectable()
 export class OtpService {
   private twilioClient;
 
-  constructor(private prisma: PrismaService, private config: ConfigService,  @Inject(forwardRef(() => AuthService)) private readonly authService: AuthService,) {
+  constructor(
+    private prisma: PrismaService, 
+    private config: ConfigService,  
+    @Inject(forwardRef(() => AuthService)) private readonly authService: AuthService,
+    private readonly shopService: ShopService,
+  ) {
     // @Inject(forwardRef(() => AuthService)) 
     // Uncomment and configure Twilio client if needed
     // this.twilioClient = twilio(
@@ -38,7 +44,7 @@ export class OtpService {
         });
       }
 
-      await this.prisma.user.upsert({
+      const user = await this.prisma.user.upsert({
         where: { mobileNumber },
         update: { otp, otpExpiresAt: expiry },
         create: {
@@ -49,6 +55,22 @@ export class OtpService {
           otpExpiresAt: expiry,
         },
       });
+
+      // Auto-create shop for new shop_owner users
+      if (user.roleId === roleRecord.id) {
+        // Check if shop already exists for this user
+        const existingShop = await this.prisma.shop.findFirst({
+          where: { ownerId: user.id }
+        });
+        
+        if (!existingShop) {
+          await this.shopService.create({
+            name: `Shop of ${mobileNumber}`,
+            phone: mobileNumber,
+            address: 'Default Address',
+          }, user.id);
+        }
+      }
     } catch (error) {
       console.error('OTP Save Error:', error);
       throw new InternalServerErrorException('Failed to store OTP. Please try again.');
@@ -65,6 +87,9 @@ export class OtpService {
       //   to: mobileNumber,
       // });
   
+      // For development: Log OTP to console
+      console.log(`📱 OTP for ${mobileNumber}: ${otp}`);
+      console.log(`🔗 You can use this OTP to login: ${otp}`);
       
     } catch (error) {
       throw new InternalServerErrorException('Failed to send OTP. Please try again.');
