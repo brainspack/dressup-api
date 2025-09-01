@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,7 +7,179 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        RoleName @unique
+  permissions Json
+  users       User[]
+}
 
+model User {
+  id           String    @id @default(uuid())
+  name         String?
+  mobileNumber String    @unique
+  language     Language  @default(HI)
+  createdAt    DateTime  @default(now())
+  otp          String?
+  otpExpiresAt DateTime?
+  roleId       Int
+  refreshToken String?
+  shops        Shop[]    @relation("ShopOwnerRelation")
+  role         Role      @relation(fields: [roleId], references: [id])
+
+  @@map("users")
+}
+
+model Shop {
+  id           String     @id @default(uuid())
+  name         String
+  ownerId      String
+  address      String     @default("")
+  createdAt    DateTime   @default(now())
+  isActive     Boolean    @default(true)
+  phone        String     @unique @default("")
+  deletedAt    DateTime?
+  serialNumber Int        @unique @default(autoincrement())
+  customers    Customer[]
+  orders       Order[]
+  payments     Payment[]
+  owner        User       @relation("ShopOwnerRelation", fields: [ownerId], references: [id])
+  tailors      Tailor[]
+
+  @@map("shops")
+}
+
+model Tailor {
+  id           String       @id @default(uuid())
+  name         String
+  mobileNumber String       @unique
+  shopId       String
+  deletedAt    DateTime?
+  serialNumber Int          @unique @default(autoincrement())
+  address      String?
+  status       TailorStatus @default(INACTIVE)
+  shop         Shop         @relation(fields: [shopId], references: [id])
+
+  @@map("tailors")
+}
+
+model Customer {
+  id           String        @id @default(uuid())
+  name         String
+  mobileNumber String        @unique
+  address      String?
+  createdAt    DateTime      @default(now())
+  shopId       String
+  deletedAt    DateTime?
+  serialNumber Int           @unique @default(autoincrement())
+  shop         Shop          @relation(fields: [shopId], references: [id])
+  measurements Measurement[]
+  orders       Order[]
+
+  @@map("customers")
+}
+
+model Measurement {
+  id           String    @id @default(uuid())
+  customerId   String
+  height       Float?
+  chest        Float?
+  waist        Float?
+  hip          Float?
+  shoulder     Float?
+  sleeveLength Float?
+  inseam       Float?
+  neck         Float?
+  createdAt    DateTime  @default(now())
+  orderId      String?
+  deletedAt    DateTime?
+  clothId      String    @unique
+  ankle        Float?
+  armhole      Float?
+  bicep        Float?
+  calf         Float?
+  knee         Float?
+  outseam      Float?
+  thigh        Float?
+  wrist        Float?
+  cloth        Cloth     @relation(fields: [clothId], references: [id])
+  customer     Customer  @relation(fields: [customerId], references: [id])
+  order        Order?    @relation(fields: [orderId], references: [id])
+
+  @@map("measurements")
+}
+
+model Order {
+  id           String        @id @default(uuid())
+  customerId   String
+  shopId       String
+  tailorName   String?
+  tailorNumber String?
+  status       OrderStatus   @default(PENDING)
+  orderType    OrderType     @default(STITCHING)
+  notes        String?
+  createdAt    DateTime      @default(now())
+  deliveryDate DateTime?
+  orderDate    DateTime      @default(now())
+  deletedAt    DateTime?
+  serialNumber Int           @unique @default(autoincrement())
+  assignedAt   DateTime?
+  assignedTo   String?
+  totalAmount  Float?
+  alterationPrice Float?
+  clothes      Cloth[]
+  costs        Cost[]
+  measurements Measurement[]
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  shop         Shop          @relation(fields: [shopId], references: [id])
+  payments     Payment[]
+
+  @@map("orders")
+}
+
+model Cloth {
+  id           String       @id @default(uuid())
+  orderId      String
+  type         String
+  color        String?
+  fabric       String?
+  designNotes  String?
+  imageUrls    String[]
+  videoUrls    String[]
+  createdAt    DateTime     @default(now())
+  materialCost Float?
+  price        Float?
+  imageData    String[]
+  order        Order        @relation(fields: [orderId], references: [id])
+  measurements Measurement?
+
+  @@map("cloths")
+}
+
+model Cost {
+  id           String @id @default(uuid())
+  orderId      String
+  materialCost Float
+  laborCost    Float
+  totalCost    Float
+  order        Order  @relation(fields: [orderId], references: [id])
+
+  @@map("cost")
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  shopId    String
+  orderId   String
+  amount    Float
+  paidAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id])
+  shop      Shop     @relation(fields: [shopId], references: [id])
+
+  @@index([shopId, paidAt])
+  @@map("payments")
+}
 
 enum Language {
   EN
@@ -27,11 +193,9 @@ enum OrderStatus {
   CANCELLED
 }
 
-model Role {
-  id          Int      @id @default(autoincrement())
-  name        RoleName @unique
-  permissions Json
-  users       User[]
+enum OrderType {
+  STITCHING
+  ALTERATION
 }
 
 enum RoleName {
@@ -39,190 +203,7 @@ enum RoleName {
   SHOP_OWNER
 }
 
-model User {
-  id           String   @id @default(uuid())
-  name         String?
-  mobileNumber String   @unique
-  roleId       Int
-  role         Role       @relation(fields: [roleId], references: [id])
-  language     Language @default(HI)
-  otp           String?  // OTP stored temporarily
-  otpExpiresAt  DateTime? // OTP expiration time
-  createdAt    DateTime @default(now())
-  refreshToken String?   // <-- Add this line for refresh token
-  // Relations
-  shops Shop[] @relation("ShopOwnerRelation") // Shop owners manage multiple shops
-
-  @@map("users")
+enum TailorStatus {
+  INACTIVE
+  ACTIVE
 }
-
-model Shop {
-  id            String   @id @default(uuid())
-  serialNumber  Int      @unique @default(autoincrement())
-  name          String
-  phone         String   @unique @default("")
-  address       String   @default("")
-
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  deletedAt     DateTime? // Soft delete field
-  
-  ownerId       String   // ✅ Add this line
-  owner         User     @relation("ShopOwnerRelation", fields: [ownerId], references: [id])     
-  
-  tailors       Tailor[]
-  customers     Customer[]
-  orders        Order[]
-
-  @@map("shops")
-}
-
-model Tailor {
-  id           String @id @default(uuid())
-  serialNumber Int    @unique @default(autoincrement())
-  name         String
-  mobileNumber String @unique
-  shopId       String
-  deletedAt    DateTime? // Soft delete field
-
-  // Relations
-  shop Shop @relation(fields: [shopId], references: [id])
-
-  @@map("tailors")
-}
-
-model Customer {
-  id           String   @id @default(uuid())
-  serialNumber Int      @unique @default(autoincrement())
-  name         String
-  mobileNumber String   @unique
-  address      String?
-  createdAt    DateTime @default(now())
-  shopId       String
-  deletedAt    DateTime? // Soft delete field
-
-  // Relations
-  shop         Shop          @relation(fields: [shopId], references: [id])
-  measurements Measurement[]
-  orders       Order[]
-
-  @@map("customers")
-}
-
-model Measurement {
-  id           String   @id @default(uuid())
-  customerId   String
-  orderId      String? // Make orderId optional initially, assuming not all measurements are tied to an order directly
-  clothId      String   @unique // New field to link to a specific Cloth item
-  height       Float?
-  chest        Float?
-  waist        Float?
-  hip          Float?
-  shoulder     Float?
-  sleeveLength Float?
-  inseam       Float?
-  neck         Float?
-  // New fields for more detailed measurements
-  armhole      Float?   // Around the armpit
-  bicep        Float?   // Around the fullest part of the upper arm
-  wrist        Float?   // Around the wrist
-  outseam      Float?   // From waist to ankle (outer side of leg)
-  thigh        Float?   // Around the fullest part of the upper leg
-  knee         Float?   // Around the knee
-  calf         Float?   // Around the fullest part of the lower leg
-  ankle        Float?   // Around the ankle
-  createdAt    DateTime @default(now())
-  deletedAt    DateTime?   // Soft delete field
-
-  // Relations
-  customer Customer @relation(fields: [customerId], references: [id])
-  order    Order?   @relation(fields: [orderId], references: [id])
-  cloth    Cloth    @relation(fields: [clothId], references: [id]) // Relation to Cloth model
-
-  @@map("measurements")
-}
-
-model Order {
-  id           String      @id @default(uuid())
-  serialNumber Int         @unique @default(autoincrement())
-  customerId   String
-  shopId       String
-  tailorName   String? // Only store tailor name & number
-  tailorNumber String?
-  status       OrderStatus @default(PENDING)
-  orderDate    DateTime    @default(now())
-  deliveryDate DateTime? // Add this line for optional delivery date
-  createdAt    DateTime    @default(now())
-  deletedAt    DateTime?   // Soft delete field
-
-  // Relations
-  customer Customer @relation(fields: [customerId], references: [id])
-  shop     Shop     @relation(fields: [shopId], references: [id])
-  clothes  Cloth[]
-  costs    Cost[]
-  measurements Measurement[] // Add this line to link measurements to orders
-
-  @@map("orders")
-}
-
-model Cloth {
-  id          String   @id @default(uuid())
-  orderId     String
-  type        String
-  color       String?
-  fabric      String?
-  materialCost  Float?
-  designNotes String?
-  imageUrls   String[] // Only Image URLs
-  videoUrls   String[] // Only video URLs
-  createdAt   DateTime @default(now())
-  // Relations
-  order       Order    @relation(fields: [orderId], references: [id])
-  measurements Measurement? // Each Cloth item can have one set of measurements
-
-  @@map("cloths")
-}
-
-model Cost {
-  id           String @id @default(uuid())
-  orderId      String
-  materialCost Float
-  laborCost    Float
-  totalCost    Float
-
-  // Relations
-  order Order @relation(fields: [orderId], references: [id])
-
-  @@map("cost")
-}
-
-//
-// To seed required roles, create a file prisma/seed.ts with the following content:
-//
-// import { PrismaClient } from '@prisma/client';
-// const prisma = new PrismaClient();
-//
-// async function main() {
-//   await prisma.role.upsert({
-//     where: { name: 'SUPER_ADMIN' },
-//     update: {},
-//     create: {
-//       name: 'SUPER_ADMIN',
-//       permissions: { can_add: true, can_update: true, can_view: true, can_delete: true },
-//     },
-//   });
-//   await prisma.role.upsert({
-//     where: { name: 'SHOP_OWNER' },
-//     update: {},
-//     create: {
-//       name: 'SHOP_OWNER',
-//       permissions: { can_add: true, can_update: true, can_view: true, can_delete: true },
-//     },
-//   });
-// }
-//
-// main().catch(e => { console.error(e); process.exit(1); }).finally(() => prisma.$disconnect());
-//
-// Then run:
-// npx tsx prisma/seed.ts
-//

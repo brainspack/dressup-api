@@ -77,17 +77,14 @@ export class ShopService {
   async findById(id: string) {
     try {
       const shop = await this.prisma.shop.findUnique({
-        where: { id, deletedAt: null }, // Exclude soft-deleted shops
-        include: {
-          customers: {
-            where: { deletedAt: null }, // Include only active customers
-          },
-          tailors: {
-            where: { deletedAt: null }, // Include only active tailors
-          },
-          orders: {
-            where: { deletedAt: null }, // Include only active orders
-          },
+        where: { id, deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          address: true,
+          isActive: true,
+          createdAt: true,
           owner: {
             select: {
               id: true,
@@ -103,12 +100,73 @@ export class ShopService {
         return null;
       }
 
-      // Calculate metrics
-      const totalActiveCustomers = shop.customers.length;
-      const totalActiveTailors = shop.tailors.length;
-      const totalOrders = shop.orders.length;
-      const deliveredOrders = shop.orders.filter(order => order.status === 'DELIVERED').length;
-      const pendingOrders = shop.orders.filter(order => order.status === 'PENDING' || order.status === 'IN_PROGRESS').length;
+      // Calculate metrics via counts to avoid sending large arrays
+      const [
+        totalTailors,
+        totalActiveTailors,
+        totalInactiveTailors,
+        totalCustomers,
+        deliveredCustomers,
+        inProgressCustomers,
+        pendingCustomers,
+        totalOrders,
+        deliveredOrders,
+        totalActiveOrders,
+      ] = await Promise.all([
+        this.prisma.tailor.count({ where: { shopId: id, deletedAt: null } }),
+        this.prisma.tailor.count({ where: { shopId: id, deletedAt: null, status: 'ACTIVE' } }),
+        this.prisma.tailor.count({ where: { shopId: id, deletedAt: null, status: 'INACTIVE' } }),
+        this.prisma.customer.count({ where: { shopId: id, deletedAt: null } }),
+        // Count customers with delivered orders
+        this.prisma.customer.count({ 
+          where: { 
+            shopId: id, 
+            deletedAt: null,
+            orders: {
+              some: {
+                status: 'DELIVERED',
+                deletedAt: null
+              }
+            }
+          } 
+        }),
+        // Count customers with in-progress orders
+        this.prisma.customer.count({ 
+          where: { 
+            shopId: id, 
+            deletedAt: null,
+            orders: {
+              some: {
+                status: 'IN_PROGRESS',
+                deletedAt: null
+              }
+            }
+          } 
+        }),
+        // Count customers with pending orders
+        this.prisma.customer.count({ 
+          where: { 
+            shopId: id, 
+            deletedAt: null,
+            orders: {
+              some: {
+                status: 'PENDING',
+                deletedAt: null
+              }
+            }
+          } 
+        }),
+        this.prisma.order.count({ where: { shopId: id, deletedAt: null } }),
+        this.prisma.order.count({ where: { shopId: id, deletedAt: null, status: 'DELIVERED' } }),
+        this.prisma.order.count({ where: { shopId: id, deletedAt: null, OR: [{ status: 'PENDING' }, { status: 'IN_PROGRESS' }] } }),
+      ]);
+
+      const inactiveTailors = totalInactiveTailors;
+      // Active customers are those with in-progress orders
+      const totalActiveCustomers = inProgressCustomers;
+      // Inactive customers are those with pending orders  
+      const inactiveCustomers = pendingCustomers;
+      const pendingOrders = totalActiveOrders; // synonymous in our definition
 
       // Map owner.role to string if it's an object
       const mappedOwner = shop.owner ? {
@@ -118,15 +176,19 @@ export class ShopService {
 
       return {
         ...shop,
-        totalActiveCustomers,
+        totalTailors,
         totalActiveTailors,
+        inactiveTailors,
+        totalCustomers,
+        totalActiveCustomers,
+        inactiveCustomers,
+        deliveredCustomers,
+        inProgressCustomers,
+        pendingCustomers,
         totalOrders,
         deliveredOrders,
         pendingOrders,
-        // Remove the direct nested arrays to avoid sending too much data to frontend
-        customers: undefined, 
-        tailors: undefined, 
-        orders: undefined,
+        totalActiveOrders,
         owner: mappedOwner,
       };
     } catch (error) {
@@ -175,18 +237,23 @@ export class ShopService {
         data: { deletedAt: new Date() },
       });
 
-      // Soft delete related customers
-      await this.prisma.customer.updateMany({
-        where: { shopId: id },
-        data: { deletedAt: new Date() },
-      });
+      // ❌ REMOVED: Do NOT automatically delete related entities
+      // This was causing cascade deletions that deleted orders unintentionally
+      // Only delete the shop itself, not related customers/tailors/orders
+      
+      // // Soft delete related customers
+      // await this.prisma.customer.updateMany({
+      //   where: { shopId: id },
+      //   data: { deletedAt: new Date() },
+      // });
 
-      // Soft delete related tailors
-      await this.prisma.tailor.updateMany({
-        where: { shopId: id },
-        data: { deletedAt: new Date() },
-      });
+      // // Soft delete related tailors
+      // await this.prisma.tailor.updateMany({
+      //   where: { shopId: id },
+      //   data: { deletedAt: new Date() },
+      // });
 
+      console.log(`Shop ${id} soft-deleted, but customers/tailors/orders preserved`);
       return shop;
     } catch (error) {
       console.error('Soft delete shop error:', error);

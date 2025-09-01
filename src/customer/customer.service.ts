@@ -25,12 +25,22 @@ export class CustomerService {
         throw new Error('Valid shop ID could not be determined');
       }
 
-      return await this.prisma.customer.create({
+      // Filter out invalid fields and only keep valid Customer model fields
+      const { email, measurements, ...validCustomerData } = data;
+      
+      // Create customer with only valid fields
+      const customer = await this.prisma.customer.create({
         data: {
-          ...data,
+          ...validCustomerData,
           shopId: targetShopId,
         },
       });
+
+      // TODO: Handle measurements separately if needed
+      // For now, we'll just create the customer without measurements
+      // Measurements can be added later when creating orders/clothes
+      
+      return customer;
     } catch (error) {
       console.error('Customer service error:', error);
       if (error.code === 'P2002') {
@@ -42,18 +52,23 @@ export class CustomerService {
 
   async findByUser(userId: string) {
     try {
+      console.log(`[CustomerService] Finding customers for user: ${userId}`);
       // First, get all shops owned by the user
       const shops = await this.prisma.shop.findMany({
         where: { ownerId: userId },
         select: { id: true }
       });
 
+      console.log(`[CustomerService] Found ${shops?.length || 0} shops for user: ${userId}`);
+
       if (!shops || shops.length === 0) {
-        throw new Error('No shops found for this user');
+        console.log(`No shops found for user ${userId}, returning empty customer list`);
+        return [];
       }
 
       // Get all shop IDs
       const shopIds = shops.map(shop => shop.id);
+      console.log(`[CustomerService] Shop IDs: ${shopIds.join(', ')}`);
 
       // Find all customers from all shops owned by the user, excluding soft-deleted ones
       const customers = await this.prisma.customer.findMany({
@@ -78,10 +93,10 @@ export class CustomerService {
         }
       });
 
-    
+      console.log(`[CustomerService] Found ${customers.length} customers for user: ${userId}`);
       return customers;
     } catch (error) {
-      console.error('Find customers error:', error);
+      console.error('[CustomerService] Find customers error:', error);
       throw new InternalServerErrorException('Failed to fetch customers');
     }
   }
@@ -115,12 +130,14 @@ export class CustomerService {
         data: { deletedAt: new Date() },
       });
 
-      // Soft delete related orders of this customer
-      await this.prisma.order.updateMany({
-        where: { customerId: id },
-        data: { deletedAt: new Date() },
-      });
+      // ❌ REMOVED: Do NOT automatically delete related orders
+      // Orders should only be deleted explicitly by user action
+      // await this.prisma.order.updateMany({
+      //   where: { customerId: id },
+      //   data: { deletedAt: new Date() },
+      // });
 
+      console.log(`Customer ${id} soft-deleted, but orders preserved`);
       return customer;
     } catch (error) {
       console.error('Soft delete customer error:', error);
@@ -130,7 +147,8 @@ export class CustomerService {
 
   async update(id: string, data: { name?: string; mobileNumber?: string; address?: string }) {
     try {
-      return await this.prisma.customer.update({
+      console.log(`[CustomerService] Updating customer ${id} with data:`, data);
+      const result = await this.prisma.customer.update({
         where: { id },
         data: {
           name: data.name,
@@ -138,6 +156,8 @@ export class CustomerService {
           address: data.address,
         },
       });
+      console.log(`[CustomerService] Customer update result:`, result);
+      return result;
     } catch (error) {
       console.error('Update customer error:', error);
       throw new InternalServerErrorException(error.message || 'Failed to update customer');
@@ -177,6 +197,33 @@ export class CustomerService {
       });
     } catch (error) {
       throw new InternalServerErrorException('Failed to fetch customers for shop');
+    }
+  }
+
+  async checkUserShopStatus(userId: string) {
+    try {
+      const shops = await this.prisma.shop.findMany({
+        where: { ownerId: userId },
+        select: { 
+          id: true, 
+          name: true, 
+          phone: true, 
+          address: true,
+          isActive: true 
+        }
+      });
+
+      return {
+        hasShops: shops.length > 0,
+        shopCount: shops.length,
+        shops: shops,
+        message: shops.length > 0 
+          ? `User has ${shops.length} shop(s)` 
+          : 'No shops found. Please create a shop first to manage customers.'
+      };
+    } catch (error) {
+      console.error('[CustomerService] Check user shop status error:', error);
+      throw new InternalServerErrorException('Failed to check user shop status');
     }
   }
 }

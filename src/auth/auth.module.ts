@@ -6,6 +6,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { OtpModule } from '../otp/otp.module';
+import { ShopModule } from '../shop/shop.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { OtpModule } from '../otp/otp.module';
     }),
     forwardRef(() => OtpModule), // ✅ Import OtpModule correctly
     PrismaModule,
+    forwardRef(() => ShopModule),
   ],
   controllers: [AuthController],
   providers: [AuthService, PrismaService],
