@@ -13,6 +13,7 @@ import { OrderModule } from './order/order.module';
 import { MeasurementModule } from './measurement/measurement.module';
 import { TailorModule } from './tailor/tailor.module';
 import { OtpModule } from './otp/otp.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { OtpModule } from './otp/otp.module';
     MeasurementModule,
     OrderModule,
     CostModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

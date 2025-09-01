@@ -39,7 +39,24 @@ export class CustomerController {
       return await this.customerService.findByUser(req.user.userId);
     } catch (error) {
       console.error('Get customers error:', error);
+      if (error.message && error.message.includes('No shop found')) {
+        throw new InternalServerErrorException({
+          message: 'No shop found for this user. Please create a shop first.',
+          code: 'NO_SHOP_FOUND',
+          statusCode: 400
+        });
+      }
       throw new InternalServerErrorException('Failed to fetch customers');
+    }
+  }
+
+  @Get('shop-status')
+  async getShopStatus(@Request() req) {
+    try {
+      return await this.customerService.checkUserShopStatus(req.user.userId);
+    } catch (error) {
+      console.error('Get shop status error:', error);
+      throw new InternalServerErrorException('Failed to check shop status');
     }
   }
 
@@ -67,7 +84,10 @@ export class CustomerController {
   @Patch(':id')
   async updateCustomer(@Param('id') id: string, @Body() data: any) {
     try {
-      return await this.customerService.update(id, data);
+      console.log(`[CustomerController] Updating customer ${id} with data:`, data);
+      const result = await this.customerService.update(id, data);
+      console.log(`[CustomerController] Customer update result:`, result);
+      return result;
     } catch (error) {
       console.error('Update customer error:', error);
       throw new InternalServerErrorException(error.message || 'Failed to update customer');

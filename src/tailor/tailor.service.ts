@@ -9,14 +9,16 @@ export class TailorService {
     private shopService: ShopService
   ) {}
 
-  async create(data: { name: string; mobileNumber: string; shopId: string }) {
+  async create(data: { name: string; mobileNumber: string; address?: string; shopId: string }) {
     try {
       // No need to find the shop by userId; shopId is provided directly
       return await this.prisma.tailor.create({
         data: {
           name: data.name,
           mobileNumber: data.mobileNumber,
+          address: data.address,
           shopId: data.shopId, // Use the provided shopId directly
+          status: 'INACTIVE', // New tailors start as INACTIVE
         },
       });
     } catch (error) {
@@ -52,13 +54,14 @@ export class TailorService {
     }
   }
 
-  async update(id: string, data: { name?: string; mobileNumber?: string }) {
+  async update(id: string, data: { name?: string; mobileNumber?: string; address?: string }) {
     try {
       return await this.prisma.tailor.update({
         where: { id },
         data: {
           name: data.name,
           mobileNumber: data.mobileNumber,
+          address: data.address,
         },
       });
     } catch (error) {
@@ -88,6 +91,29 @@ export class TailorService {
     } catch (error) {
       console.error('Find all tailors error:', error);
       throw new InternalServerErrorException('Failed to fetch all tailors');
+    }
+  }
+
+  async activateTailor(tailorId: string) {
+    try {
+      return await this.prisma.tailor.update({
+        where: { id: tailorId },
+        data: { status: 'ACTIVE' },
+      });
+    } catch (error) {
+      console.error('Activate tailor error:', error);
+      throw new InternalServerErrorException('Failed to activate tailor');
+    }
+  }
+
+  async findTailorByMobileNumber(mobileNumber: string) {
+    try {
+      return await this.prisma.tailor.findUnique({
+        where: { mobileNumber, deletedAt: null },
+      });
+    } catch (error) {
+      console.error('Find tailor by mobile number error:', error);
+      throw new InternalServerErrorException('Failed to find tailor');
     }
   }
 }
